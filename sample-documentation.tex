@@ -40,6 +40,33 @@ Permission is granted to copy, distribute and/or modify this document under the 
 \tableofcontents
 \markboth{}{}
 
+\chapter*{\rlap{Fragment Shader Client}}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{chapter}{Rotating Cube}
+%\label{label_fdl}
+
+The idea behind this sample is to compile and run fragment shaders. Basically the idea was to take inspiration from Shadertoy, and have a basic little shader sandbox to play with. The idea is to embed GLSL in a slightly larger fragment shader baked by the client. These shaders have the entry point
+
+\begin{verbatim}
+void atlrFragment(out vec4 fragColor, in vec2 fragCoord)
+{
+	...
+}
+\end{verbatim}
+
+, which is called from the true entry point in the client's baked fragment shader. \verb|fragCoord| contains the pixel coordinates (literally \verb|gl_FragCoord.xy|) and  \verb|fragColor| is the fragment shader output.
+
+In addition, the following variables of the uniform \verb|atlr| (descriptor set 0) are provided:
+
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\verb|atlr| uniform member & Description \\ \hline
+\verb|float atlr.time|  & Time in seconds \\ \hline
+\verb|vec2 atlr.resolution|   & The framebuffer width and height \\ \hline
+
+\end{tabular}
+
 \chapter*{\rlap{Rotating Cube}}
 \phantomsection  % so hyperref creates bookmarks
 \addcontentsline{toc}{chapter}{Rotating Cube}
