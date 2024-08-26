@@ -18,9 +18,13 @@
 
 \hfuzz = .6pt % avoid black boxes
 
+\usepackage{verbatim}
 \usepackage{amssymb}
 \usepackage{amsmath} 
 \usepackage{fancyhdr} % To modify headers
+
+\usepackage[sorting = none]{biblatex}
+\addbibresource{water-wave.bib}
 
 \title{Antler Sample Documentation}
 \author{Taylor Wampler}
@@ -42,10 +46,10 @@ Permission is granted to copy, distribute and/or modify this document under the 
 
 \chapter*{\rlap{Fragment Shader Client}}
 \phantomsection  % so hyperref creates bookmarks
-\addcontentsline{toc}{chapter}{Rotating Cube}
+\addcontentsline{toc}{chapter}{Fragment Shader Client}
 %\label{label_fdl}
 
-The idea behind this sample is to compile and run fragment shaders. Basically the idea was to take inspiration from Shadertoy, and have a basic little shader sandbox to play with. The idea is to embed GLSL in a slightly larger fragment shader baked by the client. These shaders have the entry point
+The idea behind this sample is to compile and run fragment shaders. Taking inspiration from Shadertoy, the program functions as a basic little shader sandbox to play with. The idea is to embed GLSL in a slightly larger fragment shader baked by the client. These shaders have the entry point
 
 \begin{verbatim}
 void atlrFragment(out vec4 fragColor, in vec2 fragCoord)
@@ -54,19 +58,25 @@ void atlrFragment(out vec4 fragColor, in vec2 fragCoord)
 }
 \end{verbatim}
 
-, which is called from the true entry point in the client's baked fragment shader. \verb|fragCoord| contains the pixel coordinates (literally \verb|gl_FragCoord.xy|) and  \verb|fragColor| is the fragment shader output.
+, which is called from the true entry point in the client's baked fragment shader. \verb|fragCoord| contains the pixel coordinates (literally \verb|gl_FragCoord.xy|) and  \verb|fragColor| is the fragment shader output. When running the client, the first command line argument is required to be the path to the fragment shader. If the shader uses the \verb|textureSampler| uniform (see below), the second command line argument must be a path to an image file. The shaders \verb|prewitt.glsl|, \verb|scharr.glsl|, and \verb|sobel.glsl| all use this uniform. 
 
-In addition, the following variables of the uniform \verb|atlr| (descriptor set 0) are provided:
+The following uniform values (descriptor set 0) are provided:
 
-\centering
+\begin{center}
 \begin{tabular}{|c|c|}
 \hline
-\verb|atlr| uniform member & Description \\ \hline
-\verb|float atlr.time|  & Time in seconds \\ \hline
-\verb|vec2 atlr.resolution|   & The framebuffer width and height \\ \hline
+Uniform & Description \\ \hline
+\verb|float ubo.time|  & Time in seconds \\ \hline
+\verb|vec2 ubo.resolution|   & The framebuffer width and height \\ \hline
+\verb|sampler2D textureSampler| & Texture loaded from a provided file path \\ \hline
 
 \end{tabular}
+\end{center}
 
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
 \chapter*{\rlap{Rotating Cube}}
 \phantomsection  % so hyperref creates bookmarks
 \addcontentsline{toc}{chapter}{Rotating Cube}
@@ -126,7 +136,8 @@ By $\theta(0)= 0$, $C = b T \nu(0) / 2 a \pi$. Thus
 \theta(t) = \left[t + \frac{b T}{2 a \pi} * \left( 1 - \cos\left(\frac{2 \pi t}{T}\right) \right) \right] * \nu(0).
 \end{equation}
 
-We have an analytic expression for $\theta$, rather than using a time step and an integration technique. Consequently, naively plugging in an ever-increasing value for $t$ will eventually cause large precision error. 
+We have an analytic expression for $\theta$, rather than using a time step and an integration technique. 
+Consequently, naively plugging in an ever-increasing value for $t$ will eventually cause large precision error. 
 The simulation likely won't run so long, but I'll consider this an extra feature (this is where the periodicity of $s(t)$ comes in). Restrict $t$ to the interval $[0,T)$; if $n \in \mathbb{N}$, then by Eq.(\ref{eq:rot-cube:side}) and Eq.(\ref{eq:rot-cube:theta}),
 
 
@@ -139,7 +150,8 @@ s(t + n T) = \left[ a + b * \sin\left(\frac{2 \pi t}{T}\right) \right]^{-1/2}\te
 \end{equation*}
 
 
-Now let's discuss how this would look in code. The application loop consists of an inner update loop which operates at a fixed time step, an interpolation step, and a render step.
+Now let's discuss how this would look in code. 
+The application loop consists of an inner update loop which operates at a fixed time step, an interpolation step, and a render step.
 Initialize the variables $\alpha$, $s$, and $\theta$ to zero. The update procedure is as follows:
 
 \begin{enumerate}
@@ -154,6 +166,90 @@ Naive individual shifts or clamps will cause problems when interpolating between
 
 During the interpolation step, $s$ and $\theta$ are interpolated between update frames. $s$ is linearly interpolated and $\theta$ is interpolated with slerp.
 
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+\begin{comment}
+\chapter*{\rlap{Water Waves}}
+\phantomsection  % so hyperref creates bookmarks
+\addcontentsline{toc}{chapter}{Water Waves}
+%\label{label_fdl}
+
+\begin{refsection}
+
+Consider some region of water, assumed to be inviscid, with the flow velocity vector field $u : \mathbb{R}^3 \times [0, \infty)  \to \mathbb{R}^3$; 
+$u = u(x, y, z, t)$, where $(x, y, z)$ is a point in Euclidean space and $t$ is the time. 
+Let $\rho$ be the density, $p$ the pressure, and $-\nabla V$ the conserved extraneous forces where
+$\nabla$ is the spacial gradient in $\mathbb{R}^3$. If $u = \nabla \phi$ is satisfied, 
+then $u$ describes a potential flow and $\phi$ is referred to as the velocity potential. 
+This potential is not unique to $u$, because the velocity remains invariant when the potential is shifted by arbitrary time functions. 
+If $\phi$ exists and $\rho$ is either constant or a function of $p$ only, then integration of the Eulerian equations (conservation of momentum) yields \cite{lamb1993hydrodynamics}
+
+\begin{equation}\label{eq:water-waves:bernoulli-generalized}
+0 = \frac{p}{\rho} + \frac{\partial \phi}{\partial t} + V + \frac{1}{2} \left( \nabla \phi \right)^2,
+\end{equation}
+
+which is the Bernoulli equation. Take V = gz, the only conserved force to be concerned with is the force of gravity. We will assume constant density $\rho$, then the continuity equation (conservation of mass) implies incompressibility \cite{lamb1993hydrodynamics}
+
+\begin{equation}\label{eq:water-waves:incompressible}
+\nabla^2 \phi = 0.
+\end{equation}
+
+Given a function $B(x, y, z, t)$, $B = 0$ describes a boundary condition. Since B = 0 on the boundary for all time, the derivative with respect to time following a material particle on the boundary (the material derivative), must be zero \cite{lamb1993hydrodynamics, mei2005}.  
+So we have $(\partial / \partial t + \nabla \phi \cdot \nabla)B$ equal to zero on the boundary.
+
+At rest, let's say that the water's surface is the $xy$ plane. 
+And the floor underneath is fixed at $z = -d$,
+ while the water's surface is described by the function $\zeta(x, y, t)$. Thus
+
+\begin{equation}\label{eq:water-waves:lower-bound}
+B = -d - z \implies \left[ \frac{\partial \phi}{\partial z} \right]^{z=-d} = 0 \textbf{, and}
+\end{equation}
+
+\begin{equation}\label{eq:water-waves:upper-bound}
+B = \zeta - z \implies \left[ \frac{\partial \phi}{\partial z} \right]^{z=\zeta} = \frac{\partial \zeta}{\partial t} + \left[ \nabla \phi \right]^{z=\zeta} \cdot \nabla \zeta.
+\end{equation}
+
+These describe the kinematic boundary conditions. There is another dynamic boundary condition in the presence of surface tension. First lets examine this surface tension term a small rectangular element on the water surface, with opposite corners $(x, y)$ and $(\delta x, \delta y)$. With surface tension $\gamma$ (force per unit length), the net force in the z-direction is
+
+\begin{equation*}
+F_{st} = \gamma \left( 
+\delta y * \left( 
+\left[ \frac{\partial \zeta}{\partial x} \right]^{x = x + \delta x} - 
+\frac{\partial \zeta}{\partial x}
+\right) 
++ \delta x * \left( 
+\left[ \frac{\partial \zeta}{\partial y} \right]^{y = y + \delta y} - 
+\frac{\partial \zeta}{\partial y}
+\right) 
+\right)
+\end{equation*}
+
+\begin{equation*}
+F_{st} = \gamma \delta x \delta y \nabla^2 \zeta.
+\end{equation*}
+
+The dynamic boundary condition balances the forces at the water's surface.
+
+\begin{equation*}
+B = p - p_{atm} + \gamma \nabla^2 \zeta
+\end{equation*}
+
+where $p_{atm}$ is the atmospheric pressure. Instead of concerning ourselves with the fluid properties of the air above the water, we assumed $p_{atm}$ as constant in time and space. Now apply Eq.(\ref{eq:water-waves:bernoulli-generalized}).
+
+\begin{equation*}
+-B = p_{atm} - \gamma \nabla^2 \zeta + \frac{\partial \phi}{\partial t} + g z + \frac{1}{2} \left( \nabla \phi \right)^2.
+\end{equation*}
+
+\printbibliography[heading=subbibliography]
+
+\end{refsection}
+\end{comment}
+
+%---------------------------------------------------------------------
+%---------------------------------------------------------------------
+%---------------------------------------------------------------------
 %---------------------------------------------------------------------
 \chapter*{\rlap{GNU Free Documentation License}}
 \phantomsection  % so hyperref creates bookmarks
